@@ -2,6 +2,8 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Logging S3 Bucket"
 
+Parameters: {}
+
 Mappings:
   mElbAccountMap:
     us-east-1:
