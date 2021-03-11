@@ -1,0 +1,94 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Logging S3 Bucket"
+
+Mappings:
+  mElbAccountMap:
+    us-east-1:
+      accountId: "127311923021"
+    us-east-2:
+      accountId: "033677994240"
+    us-west-1:
+      accountId: "027434742980"
+    us-west-2:
+      accountId: "797873946194"
+    af-south-1:
+      accountId: "098369216593"
+    ca-central-1:
+      accountId: "985666609251"
+    eu-central-1:
+      accountId: "054676820928"
+    eu-west-1:
+      accountId: "156460612806"
+    eu-west-2:
+      accountId: "652711504416"
+    eu-south-1:
+      accountId: "635631232127"
+    eu-west-3:
+      accountId: "652711504416"
+    eu-north-1:
+      accountId: "897822967062"
+
+Resources:
+
+  rLogsBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+        BucketName: !Sub "logging-${AWS::AccountId}"
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: Yes
+          BlockPublicPolicy: Yes
+          IgnorePublicAcls: Yes
+          RestrictPublicBuckets: Yes
+        VersioningConfiguration:
+          Status: Enabled
+
+  rLogsBucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref rLogsBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "DenyDelete"
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !Sub "${rLogsBucket.Arn}"
+              - !Sub "${rLogsBucket.Arn}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": "false"
+
+          - Sid: "AWSLogDeliveryWrite"
+            Effect: Allow
+            Principal:
+              Service:
+                - "delivery.logs.amazonaws.com"
+            Action:
+              - s3:PutObject
+            Resource:
+              - !Sub "${rLogsBucket.Arn}/AWSLogs/${AWS::AccountId}/*"
+            Condition:
+              StringEquals:
+                "s3:x-amz-acl": "bucket-owner-full-control"
+
+          - Sid: "AWSElbLogDeliveryWrite"
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Sub
+                  - "arn:aws:iam::${ElbAccountId}:root"
+                  - ElbAccountId: !FindInMap [mElbAccountMap, !Ref "AWS::Region", accountId]
+            Action:
+              - s3:PutObject
+            Resource:
+              - !Sub "${rLogsBucket.Arn}/AWSLogs/${AWS::AccountId}/*"
+            Condition:
+              StringEquals:
+                "s3:x-amz-acl": "bucket-owner-full-control"
