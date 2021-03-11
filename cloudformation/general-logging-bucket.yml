@@ -35,6 +35,7 @@ Resources:
 
   rLogsBucket:
     Type: "AWS::S3::Bucket"
+    #checkov:skip=CKV_AWS_18: Ensure the S3 bucket has access logging enabled
     Properties:
         BucketName: !Sub "logging-${AWS::AccountId}"
         BucketEncryption:
@@ -48,6 +49,14 @@ Resources:
           RestrictPublicBuckets: Yes
         VersioningConfiguration:
           Status: Enabled
+        LifecycleConfiguration:
+          Rules:
+            - Id: Transition90daysRetain7yrs
+              Status: Enabled
+              ExpirationInDays: 2555
+              Transition:
+                TransitionInDays: 90
+                StorageClass: GLACIER
 
   rLogsBucketPolicy:
     Type: "AWS::S3::BucketPolicy"
@@ -56,7 +65,7 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          - Sid: "DenyDelete"
+          - Sid: "DenyNoSSL"
             Effect: Deny
             Principal: "*"
             Action: s3:*
